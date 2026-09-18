@@ -17,7 +17,7 @@
 <title>Kanatouch Wongga</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=Karla:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=Karla:wght@400;500;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <!--
@@ -26,29 +26,30 @@
   kanatouch.wong@gmail.com, Instagram @kookooknt, Bangkok
   University, Assumption College Thonburi.
 
-  MOCKED — invented, replace when convenient: major & years,
-  both About paragraphs, Education detail lines, Focus chips,
-  the whole "Selected work" section, and the meta line.
+  MOCKED — invented, replace when convenient: everything in
+  About, Selected work, Focus, the Education detail lines and
+  year ranges, and the availability line.
 
-  3D: two WebGL contexts — a fixed full-page scene with one
-  object anchored to each section, and the portrait gem.
-  Both idle when off-screen and go static under reduced-motion.
+  Each section carries its own identity: a hue (--sect), its own
+  layout shape, its own backdrop animation, and its own 3D object
+  with its own material. See "Per-section" blocks below.
   ─────────────────────────────────────────────────────────────
 -->
 
 <style>
   :root{
     --ground:#0A0918;
-    --ground-2:rgba(255,255,255,.035);
     --line:rgba(255,255,255,.14);
     --line-soft:rgba(255,255,255,.08);
     --text:#F2EFFA;
     --muted:#A79FC4;
     --muted-dim:#786F9B;
-    --accent:#FFB25C;
+    --amber:#FFB25C;
     --magenta:#F0509B;
-    --violet:#7C5CE6;
     --teal:#2ED4C6;
+    --violet:#9E7CF5;
+    --sky:#6FA8FF;
+    --sect:var(--violet);
     --font-display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
     --font-body:"Karla","Helvetica Neue",Arial,sans-serif;
     --font-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
@@ -68,18 +69,15 @@
     overflow-x:hidden;
   }
 
-  /* Colour field */
   .mesh{
     position:fixed;
     inset:-10%;
     pointer-events:none;
     z-index:0;
     background:
-      radial-gradient(48% 38% at 12% 4%,  rgba(240,80,155,.34), transparent 68%),
-      radial-gradient(44% 40% at 88% 12%, rgba(124,92,230,.38), transparent 70%),
-      radial-gradient(52% 34% at 78% 52%, rgba(46,212,198,.20), transparent 70%),
-      radial-gradient(46% 32% at 8%  68%, rgba(255,178,92,.20), transparent 72%),
-      radial-gradient(60% 44% at 50% 104%,rgba(124,92,230,.26), transparent 72%),
+      radial-gradient(48% 38% at 12% 4%,  rgba(240,80,155,.30), transparent 68%),
+      radial-gradient(44% 40% at 88% 12%, rgba(124,92,230,.34), transparent 70%),
+      radial-gradient(60% 44% at 50% 104%,rgba(124,92,230,.22), transparent 72%),
       linear-gradient(180deg, #120C26 0%, #0A0918 46%, #0C0A1E 100%);
     animation:drift 48s ease-in-out infinite alternate;
   }
@@ -87,26 +85,16 @@
     from{transform:translate3d(0,0,0) scale(1)}
     to{transform:translate3d(-2%,1.5%,0) scale(1.06)}
   }
-  /* Fixed WebGL layer: one object anchored per section */
   #stage{
-    position:fixed;
-    inset:0;
-    width:100%;
-    height:100%;
-    z-index:0;
-    pointer-events:none;
-    display:block;
+    position:fixed;inset:0;width:100%;height:100%;
+    z-index:0;pointer-events:none;display:block;
   }
   .grain{
-    position:fixed;
-    inset:0;
-    pointer-events:none;
-    z-index:1;
-    opacity:.45;
-    mix-blend-mode:overlay;
+    position:fixed;inset:0;pointer-events:none;z-index:1;
+    opacity:.4;mix-blend-mode:overlay;
     background-image:
-      repeating-linear-gradient(0deg,   rgba(255,255,255,.035) 0 1px, transparent 1px 3px),
-      repeating-linear-gradient(90deg,  rgba(0,0,0,.05) 0 1px, transparent 1px 3px);
+      repeating-linear-gradient(0deg,  rgba(255,255,255,.035) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 1px, transparent 1px 3px);
   }
 
   /* ── Rail ───────────────────────────────────────────── */
@@ -114,77 +102,58 @@
     position:sticky;
     top:env(safe-area-inset-top, 0px);
     z-index:20;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    padding:14px 22px;
+    display:flex;align-items:center;justify-content:space-between;
+    gap:16px;padding:14px 22px;
     background:rgba(12,10,26,.55);
     backdrop-filter:blur(16px) saturate(140%);
     -webkit-backdrop-filter:blur(16px) saturate(140%);
     border-bottom:1px solid var(--line-soft);
   }
   .mark{
-    font-family:var(--font-mono);
-    font-size:12px;
-    letter-spacing:.18em;
-    text-transform:uppercase;
-    color:var(--text);
-    text-decoration:none;
-    white-space:nowrap;
+    font-family:var(--font-mono);font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--text);text-decoration:none;white-space:nowrap;
   }
   .mark span{color:var(--magenta)}
   .rail nav{display:flex;gap:16px;flex-wrap:wrap;justify-content:flex-end}
   .rail nav a{
-    font-family:var(--font-mono);
-    font-size:12px;
-    letter-spacing:.08em;
-    color:var(--muted);
-    text-decoration:none;
-    padding:2px 0;
+    font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;
+    color:var(--muted);text-decoration:none;padding:2px 0;
     border-bottom:1px solid transparent;
     transition:color .18s ease, border-color .18s ease;
   }
-  .rail nav a:hover,.rail nav a:focus-visible{color:var(--text);border-bottom-color:var(--accent)}
+  .rail nav a[href="#about"]:hover{color:var(--amber);border-bottom-color:var(--amber)}
+  .rail nav a[href="#work"]:hover{color:var(--magenta);border-bottom-color:var(--magenta)}
+  .rail nav a[href="#education"]:hover{color:var(--teal);border-bottom-color:var(--teal)}
+  .rail nav a[href="#focus"]:hover{color:var(--violet);border-bottom-color:var(--violet)}
+  .rail nav a[href="#contact"]:hover{color:var(--sky);border-bottom-color:var(--sky)}
+  .rail nav a:focus-visible{color:var(--text)}
 
-  /* ── Page frame — the CSS 3D stage ──────────────────── */
+  /* ── Page frame ─────────────────────────────────────── */
   .page{
-    position:relative;
-    z-index:2;
-    max-width:880px;
-    margin:0 auto;
-    padding-inline:22px;
-    padding-block:0 0;
-    perspective:1400px;
-    perspective-origin:50% 50%;
+    position:relative;z-index:2;max-width:880px;margin:0 auto;
+    padding-inline:22px;perspective:1400px;perspective-origin:50% 50%;
   }
-  .masthead,.page section{
-    transform-style:preserve-3d;
-    will-change:transform;
+  .masthead,.page section{transform-style:preserve-3d;will-change:transform}
+  .page section{position:relative;isolation:isolate;padding-block:clamp(52px,8vw,84px)}
+  .page section > *:not(.veil){position:relative;z-index:1}
+
+  /* every section announces itself differently — see per-section blocks */
+  .eyebrow{
+    font-family:var(--font-mono);font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--amber);margin:0 0 20px;
   }
 
   /* ── Masthead ───────────────────────────────────────── */
   .masthead{
     padding-block:clamp(48px,9vw,88px) clamp(40px,7vw,72px);
-    display:grid;
-    grid-template-columns:1fr;
-    gap:38px;
-    align-items:start;
+    display:grid;grid-template-columns:1fr;gap:38px;align-items:start;
   }
-  @media (min-width:760px){
-    .masthead{grid-template-columns:1fr 250px;gap:48px}
-  }
+  @media (min-width:760px){.masthead{grid-template-columns:1fr 250px;gap:48px}}
 
   .portrait{
-    position:relative;
-    aspect-ratio:4/5;
-    max-width:100%;
-    width:min(250px,64vw);
-    border-radius:20px;
-    overflow:hidden;
-    border:1px solid var(--line);
-    display:grid;
-    place-items:center;
+    position:relative;aspect-ratio:4/5;max-width:100%;width:min(250px,64vw);
+    border-radius:20px;overflow:hidden;border:1px solid var(--line);
+    display:grid;place-items:center;
     background:
       radial-gradient(75% 60% at 22% 12%, rgba(240,80,155,.42), transparent 70%),
       radial-gradient(70% 65% at 85% 30%, rgba(124,92,230,.50), transparent 72%),
@@ -193,442 +162,342 @@
     box-shadow:0 22px 60px -28px rgba(240,80,155,.7), 0 0 0 6px rgba(255,255,255,.03);
   }
   .portrait::after{
-    content:"";
-    position:absolute;
-    inset:0;
+    content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
     background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px);
     mix-blend-mode:overlay;
-    pointer-events:none;
-    z-index:3;
   }
   .portrait img{width:100%;height:100%;object-fit:cover;display:block;grid-area:1/1}
   .portrait canvas{width:100%;height:100%;display:block;grid-area:1/1;z-index:2}
   .monogram{
-    grid-area:1/1;
-    z-index:1;
-    font-family:var(--font-display);
-    font-weight:800;
-    font-size:64px;
-    letter-spacing:-.05em;
-    color:rgba(255,255,255,.92);
-    text-shadow:0 2px 24px rgba(0,0,0,.45);
-    align-self:center;
-    justify-self:center;
+    grid-area:1/1;z-index:1;font-family:var(--font-display);font-weight:800;
+    font-size:64px;letter-spacing:-.05em;color:rgba(255,255,255,.92);
+    text-shadow:0 2px 24px rgba(0,0,0,.45);align-self:center;justify-self:center;
   }
   .portrait-note{
-    font-family:var(--font-mono);
-    font-size:11px;
-    letter-spacing:.14em;
-    text-transform:uppercase;
-    color:var(--muted-dim);
-    margin:12px 0 0;
-  }
-
-  .eyebrow{
-    font-family:var(--font-mono);
-    font-size:12px;
-    letter-spacing:.22em;
-    text-transform:uppercase;
-    color:var(--accent);
-    margin:0 0 20px;
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--muted-dim);margin:12px 0 0;
   }
   h1{
-    font-family:var(--font-display);
-    font-weight:800;
-    font-size:clamp(42px,9vw,78px);
-    line-height:.95;
-    letter-spacing:-.03em;
-    text-wrap:balance;
-    margin:0;
+    font-family:var(--font-display);font-weight:800;
+    font-size:clamp(42px,9vw,78px);line-height:.95;letter-spacing:-.03em;
+    text-wrap:balance;margin:0;
     background:linear-gradient(104deg,#FFE9C9 0%,#FFB25C 26%,#F0509B 62%,#9E7CF5 100%);
-    -webkit-background-clip:text;
-    background-clip:text;
-    color:transparent;
-    -webkit-text-fill-color:transparent;
+    -webkit-background-clip:text;background-clip:text;
+    color:transparent;-webkit-text-fill-color:transparent;
   }
   .thai-name{
-    font-family:var(--font-thai);
-    font-size:14px;
-    letter-spacing:.06em;
-    color:var(--muted);
-    margin:16px 0 0;
+    font-family:var(--font-thai);font-size:14px;letter-spacing:.06em;
+    color:var(--muted);margin:16px 0 0;
   }
   .standfirst{
-    font-size:clamp(17px,2.2vw,20px);
-    line-height:1.55;
-    color:var(--muted);
-    max-width:48ch;
-    margin:24px 0 0;
+    font-size:clamp(17px,2.2vw,20px);line-height:1.55;color:var(--muted);
+    max-width:48ch;margin:24px 0 0;
   }
   .standfirst strong{color:var(--text);font-weight:500}
-
   .meta{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px 26px;
-    margin-top:30px;
-    font-family:var(--font-mono);
-    font-size:12.5px;
-    letter-spacing:.05em;
-    color:var(--muted-dim);
+    display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:30px;
+    font-family:var(--font-mono);font-size:12.5px;letter-spacing:.05em;color:var(--muted-dim);
   }
   .meta b{color:var(--muted);font-weight:500}
-
   .rise{animation:rise .55s cubic-bezier(.22,.7,.3,1) both}
   .rise:nth-of-type(2){animation-delay:.06s}
   @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 
-  /* ── Sections ───────────────────────────────────────── */
-  .page section{padding-block:clamp(38px,6vw,58px);border-top:1px solid var(--line-soft)}
-  .section-label{
-    font-family:var(--font-mono);
-    font-size:11.5px;
-    letter-spacing:.2em;
-    text-transform:uppercase;
-    color:var(--teal);
-    margin:0 0 22px;
+  /* ── Backdrop veils ─────────────────────────────────── */
+  .veil{
+    position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 12%,#000 88%,transparent);
+    mask-image:linear-gradient(180deg,transparent,#000 12%,#000 88%,transparent);
   }
-  h2{
-    font-family:var(--font-display);
-    font-weight:600;
-    font-size:clamp(25px,4vw,32px);
-    line-height:1.2;
-    letter-spacing:-.018em;
-    text-wrap:balance;
-    margin:0 0 18px;
-  }
-  p{margin:0 0 16px;max-width:64ch}
-  p:last-child{margin-bottom:0}
+  .veil i{position:absolute;inset:0;display:block}
 
-  /* ── Selected work ──────────────────────────────────── */
-  .work{
-    list-style:none;
-    margin:26px 0 0;
-    padding:0;
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
-    gap:22px;
-    perspective:900px;
+  /* ══════════════════════════════════════════════════════
+     ABOUT — amber. Editorial: drop cap, wide prose, soft aurora.
+     ══════════════════════════════════════════════════════ */
+  #about{--sect:var(--amber)}
+  #about .veil i{
+    background:
+      radial-gradient(40% 54% at 18% 38%, rgba(255,178,92,.26), transparent 72%),
+      radial-gradient(46% 60% at 82% 66%, rgba(255,120,80,.16), transparent 74%);
+    animation:aurora 21s ease-in-out infinite alternate;
+    filter:blur(6px);
   }
-  .work li{display:flex;flex-direction:column;gap:12px}
+  @keyframes aurora{
+    from{transform:translate3d(-5%,3%,0) scale(1)}
+    to{transform:translate3d(5%,-4%,0) scale(1.18)}
+  }
+  #about .kicker{
+    font-family:var(--font-mono);font-size:11.5px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--sect);margin:0 0 14px;
+  }
+  #about h2{
+    font-family:var(--font-display);font-weight:300;
+    font-size:clamp(30px,5.6vw,46px);line-height:1.08;letter-spacing:-.025em;
+    margin:0 0 26px;max-width:16ch;text-wrap:balance;
+  }
+  #about .lede{font-size:clamp(17px,2vw,19px);max-width:62ch;margin:0 0 18px}
+  #about .lede::first-letter{
+    float:left;font-family:var(--font-display);font-weight:800;
+    font-size:3.4em;line-height:.82;padding:4px 12px 0 0;color:var(--sect);
+  }
+  #about p{max-width:62ch;margin:0 0 18px}
+  .facts{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:20px 28px;margin:30px 0 0;padding-top:24px;
+    border-top:1px dashed rgba(255,178,92,.32);
+  }
+  .facts div{display:flex;flex-direction:column;gap:5px}
+  .facts dt{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--muted-dim);
+  }
+  .facts dd{margin:0;font-size:15.5px;color:var(--text)}
+
+  /* ══════════════════════════════════════════════════════
+     WORK — magenta. Alternating full-width rows, hard grid.
+     ══════════════════════════════════════════════════════ */
+  #work{--sect:var(--magenta)}
+  #work .veil i{
+    background-image:
+      repeating-linear-gradient(90deg, rgba(240,80,155,.22) 0 1px, transparent 1px 48px),
+      repeating-linear-gradient(0deg,  rgba(240,80,155,.13) 0 1px, transparent 1px 48px);
+    animation:advance 4.5s linear infinite;
+  }
+  @keyframes advance{
+    from{background-position:0 0, 0 0}
+    to{background-position:0 0, 0 48px}
+  }
+  #work .head{
+    display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;
+    padding-bottom:16px;margin-bottom:34px;border-bottom:2px solid var(--sect);
+  }
+  #work h2{
+    font-family:var(--font-display);font-weight:800;
+    font-size:clamp(22px,3.4vw,30px);letter-spacing:.02em;text-transform:uppercase;
+    margin:0;line-height:1;
+  }
+  #work .count{
+    font-family:var(--font-mono);font-size:11.5px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--sect);margin:0;
+  }
+  .work{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:44px;perspective:1100px}
+  .work li{display:grid;gap:20px}
+  @media (min-width:700px){
+    .work li{grid-template-columns:1fr 1fr;gap:34px;align-items:center}
+    .work li:nth-child(even) .thumb{grid-column:2;grid-row:1}
+    .work li:nth-child(even) .body{grid-column:1;grid-row:1}
+  }
   .thumb{
-    display:block;
-    width:100%;
-    aspect-ratio:16/10;
-    max-width:100%;
-    border-radius:14px;
-    border:1px solid var(--line-soft);
-    overflow:hidden;
-    background:linear-gradient(160deg,#171034,#0B0A1C);
-    transform-style:preserve-3d;
+    display:block;width:100%;aspect-ratio:16/10;max-width:100%;
+    border:1px solid rgba(240,80,155,.3);background:#0B0A1C;
+    transform-style:preserve-3d;will-change:transform;
     transition:transform .35s cubic-bezier(.22,.7,.3,1), box-shadow .35s ease, border-color .35s ease;
-    will-change:transform;
   }
-  .work li:hover .thumb,.work li:focus-within .thumb{
-    box-shadow:0 26px 50px -30px rgba(124,92,230,.9);
-    border-color:var(--line);
-  }
+  .work li:hover .thumb{box-shadow:0 26px 50px -28px rgba(240,80,155,.85);border-color:var(--sect)}
   .thumb svg{display:block;width:100%;height:100%}
+  .work .idx{
+    font-family:var(--font-mono);font-size:11.5px;letter-spacing:.2em;
+    color:var(--sect);display:block;margin-bottom:10px;
+  }
   .work h3{
-    font-family:var(--font-display);
-    font-weight:600;
-    font-size:17px;
-    letter-spacing:-.01em;
-    margin:0;
+    font-family:var(--font-display);font-weight:800;font-size:clamp(22px,3.2vw,28px);
+    letter-spacing:-.02em;margin:0 0 12px;line-height:1.1;
   }
-  .work .kind{
-    font-family:var(--font-mono);
-    font-size:11px;
-    letter-spacing:.16em;
-    text-transform:uppercase;
-    color:var(--muted-dim);
-    display:block;
-    margin-bottom:6px;
+  .work p{font-size:15.5px;color:var(--muted);margin:0 0 16px;max-width:44ch}
+  .spec{
+    display:flex;flex-wrap:wrap;gap:6px 0;margin:0;padding:0;list-style:none;
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
   }
-  .work p{font-size:15px;color:var(--muted);margin:0;max-width:40ch}
+  .spec li{color:var(--muted-dim);padding-right:12px;margin-right:12px;border-right:1px solid var(--line-soft)}
+  .spec li:last-child{border-right:0;margin-right:0;padding-right:0}
+  .spec b{color:var(--sect);font-weight:500}
 
-  /* ── Education timeline ─────────────────────────────── */
-  .timeline{
-    list-style:none;margin:0;padding:0;
-    display:flex;flex-direction:column;gap:2px;
-    perspective:1000px;
+  /* ══════════════════════════════════════════════════════
+     EDUCATION — teal. A rail with huge years, climbing rungs.
+     ══════════════════════════════════════════════════════ */
+  #education{--sect:var(--teal)}
+  #education .veil i{
+    background-image:
+      repeating-linear-gradient(0deg, rgba(46,212,198,.20) 0 2px, transparent 2px 34px),
+      repeating-linear-gradient(0deg, rgba(46,212,198,.08) 0 1px, transparent 1px 11px);
+    animation:climb 7s linear infinite;
   }
-  .timeline li{
-    display:grid;
-    grid-template-columns:110px 1fr;
-    gap:0 24px;
-    padding:20px 18px 20px 0;
-    border-bottom:1px solid var(--line-soft);
-    transform-style:preserve-3d;
-    transition:transform .45s cubic-bezier(.22,.7,.3,1), background .45s ease;
-    border-radius:12px;
+  @keyframes climb{
+    from{background-position:0 0, 0 0}
+    to{background-position:0 -34px, 0 -11px}
   }
-  .timeline li:hover{
-    transform:rotateY(-3.5deg) translateZ(22px);
-    background:linear-gradient(90deg,rgba(124,92,230,.12),transparent 70%);
+  #education .head{margin-bottom:36px}
+  #education .kicker{
+    font-family:var(--font-mono);font-size:11.5px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--sect);margin:0 0 12px;
   }
-  .timeline li:last-child{border-bottom:0}
-  .when{
-    font-family:var(--font-mono);
-    font-size:12.5px;
-    letter-spacing:.04em;
-    color:var(--accent);
-    padding-top:5px;
-    font-variant-numeric:tabular-nums;
+  #education h2{
+    font-family:var(--font-display);font-weight:300;
+    font-size:clamp(28px,5vw,42px);letter-spacing:-.03em;margin:0;line-height:1;
   }
-  .what{margin:0}
-  .what .inst{
-    font-family:var(--font-display);
-    font-weight:600;
-    font-size:19px;
-    letter-spacing:-.01em;
-    display:block;
+  .timeline{list-style:none;margin:0;padding:0 0 0 26px;position:relative}
+  .timeline::before{
+    content:"";position:absolute;left:4px;top:8px;bottom:8px;width:1px;
+    background:linear-gradient(180deg,var(--sect),rgba(46,212,198,.12));
   }
-  .what .inst-th{
-    font-family:var(--font-thai);
-    font-size:12.5px;
-    color:var(--muted-dim);
-    display:block;
-    margin-top:5px;
+  .timeline li{position:relative;padding:0 0 38px}
+  .timeline li:last-child{padding-bottom:0}
+  .timeline li::before{
+    content:"";position:absolute;left:-26px;top:14px;width:9px;height:9px;
+    border-radius:50%;background:var(--ground);border:2px solid var(--sect);
   }
-  .what .detail{color:var(--muted);font-size:15.5px;display:block;margin-top:9px;max-width:52ch}
-
-  /* ── Focus chips ────────────────────────────────────── */
-  .chips{
-    display:flex;flex-wrap:wrap;gap:9px;margin:0;padding:0;list-style:none;
-    perspective:700px;
+  .timeline .yr{
+    display:block;font-family:var(--font-display);font-weight:800;
+    font-size:clamp(30px,5.4vw,44px);line-height:1;letter-spacing:-.04em;
+    color:var(--sect);opacity:.85;font-variant-numeric:tabular-nums;
+    margin-bottom:8px;
   }
-  .chips li{
-    font-family:var(--font-mono);
-    font-size:12.5px;
-    letter-spacing:.04em;
-    color:var(--text);
-    border:1px solid var(--line);
-    border-radius:999px;
-    padding:7px 15px;
-    background:var(--ground-2);
-    backdrop-filter:blur(6px);
-    -webkit-backdrop-filter:blur(6px);
-    transform-style:preserve-3d;
-    animation:float 6s ease-in-out infinite alternate;
-    transition:transform .3s cubic-bezier(.22,.7,.3,1), border-color .3s ease, color .3s ease;
+  .timeline .inst{
+    display:block;font-family:var(--font-display);font-weight:600;
+    font-size:19px;letter-spacing:-.01em;
   }
-  .chips li:nth-child(2){animation-delay:-.7s}
-  .chips li:nth-child(3){animation-delay:-1.4s}
-  .chips li:nth-child(4){animation-delay:-2.1s}
-  .chips li:nth-child(5){animation-delay:-2.8s}
-  .chips li:nth-child(6){animation-delay:-3.5s}
-  .chips li:nth-child(7){animation-delay:-4.2s}
-  .chips li:nth-child(8){animation-delay:-4.9s}
-  @keyframes float{
-    from{transform:translate3d(0,0,0) rotateX(0deg)}
-    to{transform:translate3d(0,-5px,16px) rotateX(7deg)}
+  .timeline .inst-th{
+    display:block;font-family:var(--font-thai);font-size:12.5px;
+    color:var(--muted-dim);margin-top:5px;
   }
-  .chips li:hover{
-    animation-play-state:paused;
-    transform:translate3d(0,-6px,40px) rotateX(-8deg);
-    border-color:var(--teal);
-    color:#fff;
+  .timeline .detail{display:block;color:var(--muted);font-size:15.5px;margin-top:10px;max-width:54ch}
+  .timeline .took{
+    display:block;margin-top:12px;padding-left:14px;
+    border-left:2px solid rgba(46,212,198,.4);
+    font-size:14.5px;color:var(--text);max-width:48ch;
+  }
+  .timeline .took b{
+    display:block;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--sect);font-weight:500;margin-bottom:3px;
   }
 
-  /* ── Contact ────────────────────────────────────────── */
-  .links{display:flex;flex-direction:column;gap:0;margin-top:6px;perspective:900px}
+  /* ══════════════════════════════════════════════════════
+     FOCUS — violet. A tag cloud at mixed sizes, sweeping rays.
+     ══════════════════════════════════════════════════════ */
+  #focus{--sect:var(--violet)}
+  #focus .veil i{
+    inset:-60%;
+    background:conic-gradient(from 0deg at 50% 50%,
+      rgba(158,124,245,.30) 0deg, transparent 24deg,
+      rgba(158,124,245,.16) 52deg, transparent 90deg,
+      rgba(200,160,255,.22) 120deg, transparent 158deg,
+      rgba(158,124,245,.26) 208deg, transparent 254deg,
+      rgba(120,90,220,.20) 300deg, transparent 348deg);
+    animation:sweep 30s linear infinite;
+  }
+  @keyframes sweep{to{transform:rotate(1turn)}}
+  #focus .head{
+    display:flex;align-items:center;gap:14px;margin-bottom:28px;
+  }
+  #focus .head::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--sect),transparent)}
+  #focus h2{
+    font-family:var(--font-display);font-weight:600;font-size:clamp(24px,3.6vw,32px);
+    letter-spacing:-.02em;margin:0;line-height:1;
+  }
+  .cloud{
+    display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 22px;
+    margin:0;padding:0;list-style:none;perspective:800px;max-width:36ch;
+  }
+  .cloud li{
+    font-family:var(--font-display);letter-spacing:-.02em;line-height:1.1;
+    color:var(--muted);transform-style:preserve-3d;
+    transition:transform .3s cubic-bezier(.22,.7,.3,1), color .3s ease;
+    animation:hover-float 7s ease-in-out infinite alternate;
+  }
+  .cloud li:hover{color:#fff;transform:translate3d(0,-4px,42px)}
+  .cloud .s1{font-size:clamp(26px,5vw,40px);font-weight:800;color:var(--text)}
+  .cloud .s2{font-size:clamp(20px,3.6vw,28px);font-weight:600;color:#CBBDF5}
+  .cloud .s3{font-size:clamp(16px,2.4vw,20px);font-weight:400}
+  .cloud .s4{font-size:14px;font-weight:400;font-family:var(--font-mono);letter-spacing:.06em}
+  .cloud li:nth-child(2n){animation-delay:-1.6s}
+  .cloud li:nth-child(3n){animation-delay:-3.2s}
+  .cloud li:nth-child(5n){animation-delay:-4.8s}
+  @keyframes hover-float{
+    from{transform:translate3d(0,0,0)}
+    to{transform:translate3d(0,-6px,20px)}
+  }
+  .now{
+    margin:36px 0 0;padding-top:24px;
+    border-top:1px solid rgba(158,124,245,.28);
+    display:flex;flex-direction:column;gap:14px;
+  }
+  .now div{display:flex;gap:18px;align-items:baseline;flex-wrap:wrap}
+  .now dt{
+    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--sect);min-width:78px;
+  }
+  .now dd{margin:0;font-size:15.5px;color:var(--muted)}
+
+  /* ══════════════════════════════════════════════════════
+     CONTACT — sky blue. Oversized menu, outward ping.
+     ══════════════════════════════════════════════════════ */
+  #contact{--sect:var(--sky)}
+  #contact .veil i{
+    inset:-25%;
+    background:repeating-radial-gradient(circle at 74% 46%,
+      rgba(111,168,255,.22) 0 1px, transparent 1px 38px);
+    animation:ping 9s ease-in-out infinite;
+  }
+  @keyframes ping{
+    0%,100%{transform:scale(1);opacity:.95}
+    50%{transform:scale(1.22);opacity:.35}
+  }
+  #contact .kicker{
+    font-family:var(--font-mono);font-size:11.5px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--sect);margin:0 0 16px;
+  }
+  #contact h2{
+    font-family:var(--font-display);font-weight:800;
+    font-size:clamp(34px,7vw,62px);letter-spacing:-.035em;line-height:.98;
+    margin:0 0 20px;
+  }
+  .availability{font-size:16px;color:var(--muted);max-width:50ch;margin:0 0 34px}
+  .availability b{color:var(--text);font-weight:500}
+  .links{display:flex;flex-direction:column;perspective:1000px}
   .links a{
-    display:flex;
-    align-items:baseline;
-    justify-content:space-between;
-    gap:18px;
-    padding:16px 14px 16px 0;
-    border-bottom:1px solid var(--line-soft);
-    text-decoration:none;
-    color:var(--text);
-    font-family:var(--font-display);
-    font-weight:600;
-    font-size:18px;
-    letter-spacing:-.01em;
-    border-radius:10px;
-    transform-style:preserve-3d;
-    transition:color .25s ease, transform .35s cubic-bezier(.22,.7,.3,1), background .35s ease;
+    display:block;padding:20px 0;border-top:1px solid rgba(111,168,255,.22);
+    text-decoration:none;color:var(--text);transform-style:preserve-3d;
+    transition:color .25s ease, transform .35s cubic-bezier(.22,.7,.3,1), padding-left .35s ease;
   }
-  .links a:hover,.links a:focus-visible{
-    color:var(--accent);
-    transform:rotateY(4deg) translateZ(30px);
-    background:linear-gradient(90deg,rgba(255,178,92,.12),transparent 70%);
+  .links a:last-child{border-bottom:1px solid rgba(111,168,255,.22)}
+  .links .what{
+    display:block;font-family:var(--font-display);font-weight:600;
+    font-size:clamp(26px,5.2vw,40px);letter-spacing:-.03em;line-height:1;
   }
   .links .handle{
-    font-family:var(--font-mono);
-    font-weight:400;
-    font-size:12.5px;
-    letter-spacing:.04em;
-    color:var(--muted);
-    text-align:right;
-    word-break:break-word;
+    display:block;margin-top:8px;font-family:var(--font-mono);font-size:12.5px;
+    letter-spacing:.04em;color:var(--muted);word-break:break-word;
   }
+  .links a:hover,.links a:focus-visible{
+    color:var(--sect);padding-left:14px;transform:translateZ(34px);
+  }
+  .links a:hover .handle{color:var(--sect)}
 
-  /* ── Skyline band ───────────────────────────────────── */
+  /* ── Skyline + footer ───────────────────────────────── */
   .skyline{margin-top:clamp(40px,6vw,64px);width:100%;overflow:hidden;will-change:transform}
   .skyline svg{display:block;width:100%;height:auto;opacity:.75}
-
   footer{
-    padding-block:22px 40px;
-    border-top:1px solid var(--line-soft);
-    font-family:var(--font-mono);
-    font-size:11.5px;
-    letter-spacing:.08em;
-    color:var(--muted-dim);
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px 20px;
-    justify-content:space-between;
+    padding-block:22px 40px;border-top:1px solid var(--line-soft);
+    font-family:var(--font-mono);font-size:11.5px;letter-spacing:.08em;
+    color:var(--muted-dim);display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between;
   }
-
-  a:focus-visible,.mark:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+  a:focus-visible,.mark:focus-visible{outline:2px solid var(--sect);outline-offset:3px}
 
   @media (prefers-reduced-motion:reduce){
-    .rise,.mesh,.chips li{animation:none !important}
-    .chips li{transform:none !important}
+    .rise,.mesh,.veil i,.cloud li{animation:none !important}
+    .cloud li{transform:none !important}
     *{transition-duration:.01ms !important}
   }
 
-  @media (max-width:520px){
+  @media (max-width:560px){
     body{font-size:16px}
     .rail{padding:12px 16px}
     .rail nav{gap:13px}
     .page{padding-inline:16px}
-    .timeline li{grid-template-columns:1fr;gap:6px;padding-right:0}
-    .when{padding-top:0}
-    .links a{flex-direction:column;gap:5px}
-    .links .handle{text-align:left}
-  }
-  /* ── Per-section moving backdrops ───────────────────── */
-  .page section{position:relative;isolation:isolate}
-  .page section > *:not(.veil){position:relative;z-index:1}
-  .veil{
-    position:absolute;
-    inset:0;
-    z-index:0;
-    overflow:hidden;
-    pointer-events:none;
-    -webkit-mask-image:linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent);
-    mask-image:linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent);
-  }
-  .veil i{position:absolute;inset:-60%;display:block}
-
-  /* About — aurora, two slow blooms passing each other */
-  #about .veil i{
-    inset:0;
-    background:
-      radial-gradient(38% 52% at 22% 42%, rgba(46,212,198,.22), transparent 70%),
-      radial-gradient(44% 58% at 78% 62%, rgba(255,178,92,.18), transparent 72%);
-    animation:aurora 19s ease-in-out infinite alternate;
-  }
-  @keyframes aurora{
-    from{transform:translate3d(-4%,2%,0) scale(1)}
-    to{transform:translate3d(4%,-3%,0) scale(1.14)}
-  }
-
-  /* Work — a grid ticking past, like a contact sheet advancing */
-  #work .veil i{
-    inset:0;
-    background-image:
-      repeating-linear-gradient(90deg, rgba(240,80,155,.17) 0 1px, transparent 1px 46px),
-      repeating-linear-gradient(0deg,  rgba(240,80,155,.10) 0 1px, transparent 1px 46px);
-    animation:advance 5.5s linear infinite;
-  }
-  @keyframes advance{from{background-position:0 0, 0 0}to{background-position:0 0, 0 46px}}
-
-  /* Education — rungs climbing, one year at a time */
-  #education .veil i{
-    inset:0;
-    background-image:
-      repeating-linear-gradient(0deg, rgba(255,178,92,.16) 0 2px, transparent 2px 30px),
-      repeating-linear-gradient(0deg, rgba(46,212,198,.09) 0 1px, transparent 1px 10px);
-    animation:climb 8s linear infinite;
-  }
-  @keyframes climb{
-    from{background-position:0 0, 0 0}
-    to{background-position:0 -30px, 0 -10px}
-  }
-
-  /* Focus — rays sweeping round, everything orbiting one point */
-  #focus .veil i{
-    background:conic-gradient(from 0deg at 50% 50%,
-      rgba(124,92,230,.24) 0deg, transparent 26deg,
-      rgba(46,212,198,.18) 54deg, transparent 88deg,
-      rgba(240,80,155,.17) 118deg, transparent 154deg,
-      rgba(124,92,230,.20) 206deg, transparent 252deg,
-      rgba(255,178,92,.15) 302deg, transparent 348deg);
-    animation:sweep 34s linear infinite;
-  }
-  @keyframes sweep{to{transform:rotate(1turn)}}
-
-  /* Contact — a signal pulsing outward from the right edge */
-  #contact .veil i{
-    inset:-20%;
-    background:repeating-radial-gradient(circle at 76% 50%,
-      rgba(255,178,92,.16) 0 1px, transparent 1px 36px);
-    animation:ping 11s ease-in-out infinite;
-  }
-  @keyframes ping{
-    0%,100%{transform:scale(1);opacity:.9}
-    50%{transform:scale(1.2);opacity:.4}
-  }
-
-  /* ── About: quick facts strip ───────────────────────── */
-  .facts{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
-    gap:18px 26px;
-    margin-top:28px;
-    padding-top:22px;
-    border-top:1px solid var(--line-soft);
-  }
-  .facts div{display:flex;flex-direction:column;gap:5px}
-  .facts dt{
-    font-family:var(--font-mono);
-    font-size:11px;
-    letter-spacing:.16em;
-    text-transform:uppercase;
-    color:var(--muted-dim);
-  }
-  .facts dd{margin:0;font-size:15.5px;color:var(--text)}
-
-  /* ── Focus: what's on right now ─────────────────────── */
-  .now{
-    margin:28px 0 0;
-    padding-top:22px;
-    border-top:1px solid var(--line-soft);
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-  }
-  .now div{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
-  .now dt{
-    font-family:var(--font-mono);
-    font-size:11px;
-    letter-spacing:.16em;
-    text-transform:uppercase;
-    color:var(--teal);
-    min-width:86px;
-  }
-  .now dd{margin:0;font-size:15.5px;color:var(--muted)}
-
-  /* ── Contact: availability ──────────────────────────── */
-  .availability{
-    font-size:15.5px;
-    color:var(--muted);
-    max-width:52ch;
-    margin:0 0 6px;
-  }
-  .availability b{color:var(--text);font-weight:500}
-
-  @media (max-width:640px){
+    #about .lede::first-letter{font-size:2.8em}
     .now div{flex-direction:column;gap:4px}
     .now dt{min-width:0}
-  }
-
-  @media (prefers-reduced-motion:reduce){
-    .veil i{animation:none !important}
+    .cloud{max-width:none}
   }
 </style>
 </head>
@@ -676,51 +545,50 @@
     </div>
   </div>
 
+  <!-- ABOUT: prose, drop cap, amber -->
   <section id="about" data-scene="about">
     <div class="veil" aria-hidden="true"><i></i></div>
-    <p class="section-label">About</p>
-    <h2>The short version</h2>
-    <p>
-      I&rsquo;m from Thonburi, ten minutes from the river on a generous day. School was
-      the ordinary Science&ndash;Math track, but the part I actually remember is the term
-      I spent rebuilding the student council&rsquo;s sign-up sheet, because the Google
-      Form kept quietly dropping entries and nobody could work out why.
+    <p class="kicker">01 &mdash; About</p>
+    <h2>Ten minutes from the river, on a generous day</h2>
+    <p class="lede">
+      Thonburi raised me, and school was the ordinary Science&ndash;Math track. The part
+      I actually remember is the term I spent rebuilding the student council&rsquo;s
+      sign-up sheet, because the Google Form kept quietly dropping entries and nobody
+      could work out why. It turned out to be a duplicated field ID. Finding that took
+      three weeks and taught me more than the whole computing syllabus.
     </p>
     <p>
-      These days I live in the front end &mdash; layout, motion, and the unglamorous work
-      of getting a page to behave on a cheap Android over 3G. Away from the screen:
-      futsal on Wednesdays, a Yashica that eats batteries faster than film, and a
-      standing disagreement with my flatmate over whether 92&deg;C is too hot.
+      Since then I&rsquo;ve lived in the front end &mdash; layout, motion, and the
+      unglamorous work of getting a page to behave on a cheap Android over 3G. I care
+      about the parts nobody photographs: focus states, Thai line-breaking, what happens
+      when the network drops halfway through a form.
+    </p>
+    <p>
+      Away from the screen it&rsquo;s futsal on Wednesdays, a Yashica that eats batteries
+      faster than film, and a standing disagreement with my flatmate over whether
+      92&deg;C is too hot for a light roast.
     </p>
     <dl class="facts">
-      <div>
-        <dt>First thing I shipped</dt>
-        <dd>A Minecraft plugin, 2018</dd>
-      </div>
-      <div>
-        <dt>Favourite bug</dt>
-        <dd>An off-by-one in a Buddhist-era date parser</dd>
-      </div>
-      <div>
-        <dt>Current obsession</dt>
-        <dd>Scroll-linked animation</dd>
-      </div>
+      <div><dt>First thing I shipped</dt><dd>A Minecraft plugin, 2018</dd></div>
+      <div><dt>Favourite bug</dt><dd>An off-by-one in a Buddhist-era date parser</dd></div>
+      <div><dt>Current obsession</dt><dd>Scroll-linked animation</dd></div>
     </dl>
   </section>
 
+  <!-- WORK: alternating rows, hard grid, magenta -->
   <section id="work" data-scene="work">
     <div class="veil" aria-hidden="true"><i></i></div>
-    <p class="section-label">Selected work</p>
-    <h2>Three things I made</h2>
-    <p>One for campus, one for whoever needs it, one for a neighbourhood.</p>
-    <ul class="work" id="work-grid">
+    <div class="head">
+      <h2>Selected work</h2>
+      <p class="count">Three, in the order I built them</p>
+    </div>
+    <ol class="work" id="work-grid">
       <li>
         <span class="thumb">
-          <svg viewBox="0 0 320 200" role="img" aria-label="A timetable grid with swapped slots highlighted">
+          <svg viewBox="0 0 320 200" role="img" aria-label="A timetable grid with two slots swapping places">
             <defs>
               <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#2ED4C6"/>
-                <stop offset="1" stop-color="#7C5CE6"/>
+                <stop offset="0" stop-color="#2ED4C6"/><stop offset="1" stop-color="#7C5CE6"/>
               </linearGradient>
             </defs>
             <rect x="0" y="0" width="320" height="200" fill="#100C26"/>
@@ -729,16 +597,21 @@
               <path d="M40 40v128M88 40v128M136 40v128M184 40v128M232 40v128M280 40v128"/>
             </g>
             <rect x="89" y="41" width="46" height="30" fill="url(#g1)" opacity=".9"/>
-            <rect x="233" y="105" width="46" height="30" fill="#F0509B" opacity=".8"/>
+            <rect x="233" y="105" width="46" height="30" fill="#F0509B" opacity=".85"/>
             <path d="M139 58h86m0 0-9-6m9 6-9 6" stroke="#FFB25C" stroke-width="1.6" fill="none"/>
             <path d="M231 118h-86m0 0 9-6m-9 6 9 6" stroke="#FFB25C" stroke-width="1.6" fill="none"/>
             <circle cx="280" cy="40" r="7" fill="#FFB25C"/>
           </svg>
         </span>
-        <div>
-          <span class="kind">Campus tool</span>
+        <div class="body">
+          <span class="idx">01</span>
           <h3>BU Course Swap</h3>
-          <p>A board where students trade section slots. Around 300 swaps went through it in one registration week. React and Firebase.</p>
+          <p>A board where students trade section slots instead of refreshing the registrar at midnight. Roughly 300 swaps went through it in one registration week.</p>
+          <ul class="spec">
+            <li><b>2024</b></li>
+            <li>React · Firebase</li>
+            <li>Campus tool</li>
+          </ul>
         </div>
       </li>
       <li>
@@ -746,8 +619,7 @@
           <svg viewBox="0 0 320 200" role="img" aria-label="Thai letter ko kai set as a large type specimen">
             <defs>
               <linearGradient id="g2" x1="0" y1="1" x2="1" y2="0">
-                <stop offset="0" stop-color="#F0509B"/>
-                <stop offset="1" stop-color="#FFB25C"/>
+                <stop offset="0" stop-color="#F0509B"/><stop offset="1" stop-color="#FFB25C"/>
               </linearGradient>
             </defs>
             <rect x="0" y="0" width="320" height="200" fill="#160D2A"/>
@@ -757,15 +629,20 @@
             </g>
             <text x="160" y="150" text-anchor="middle"
                   font-family="'Noto Sans Thai','Thonburi',sans-serif"
-                  font-size="128" fill="url(#g2)">&#3585;</text>
+                  font-size="128" fill="url(#g2)">ก</text>
             <text x="52" y="184" font-family="monospace" font-size="11"
                   letter-spacing="2" fill="#8A7BB8">KO KAI / 96PT</text>
           </svg>
         </span>
-        <div>
-          <span class="kind">Open source</span>
+        <div class="body">
+          <span class="idx">02</span>
           <h3>Sompong</h3>
-          <p>A date picker that speaks Buddhist-era years and doesn&rsquo;t collapse under stacked Thai tone marks. On npm, 11 kB.</p>
+          <p>A date picker that speaks Buddhist-era years and doesn&rsquo;t collapse under stacked Thai tone marks. Written after the third library that got it wrong.</p>
+          <ul class="spec">
+            <li><b>2025</b></li>
+            <li>TypeScript · 11 kB</li>
+            <li>On npm</li>
+          </ul>
         </div>
       </li>
       <li>
@@ -780,75 +657,80 @@
             </g>
             <path d="M92 62h58v38h58v30" fill="none" stroke="#FFB25C" stroke-width="2.2"
                   stroke-dasharray="6 5" stroke-linecap="round"/>
-            <g fill="#F0509B">
-              <path d="M92 62a7 7 0 1 1 0-14 7 7 0 0 1 0 14zm0 0v10"
-                    stroke="#F0509B" stroke-width="2"/>
-              <path d="M150 100a7 7 0 1 1 0-14 7 7 0 0 1 0 14zm0 0v10"
-                    stroke="#F0509B" stroke-width="2"/>
+            <g stroke="#F0509B" stroke-width="2" fill="#F0509B">
+              <path d="M92 62a7 7 0 1 1 0-14 7 7 0 0 1 0 14zm0 0v10"/>
+              <path d="M150 100a7 7 0 1 1 0-14 7 7 0 0 1 0 14zm0 0v10"/>
             </g>
             <circle cx="208" cy="130" r="9" fill="#FFB25C"/>
             <text x="18" y="184" font-family="monospace" font-size="11"
                   letter-spacing="2" fill="#8A7BB8">40 SHOPHOUSES</text>
           </svg>
         </span>
-        <div>
-          <span class="kind">Side project</span>
+        <div class="body">
+          <span class="idx">03</span>
           <h3>Talat Noi at Night</h3>
-          <p>A walking map of forty shophouses in Talat Noi, drawn from two months of Sunday visits and far too many photographs.</p>
+          <p>A walking map of forty shophouses in Talat Noi, drawn from two months of Sunday visits, far too many photographs and one very patient noodle vendor.</p>
+          <ul class="spec">
+            <li><b>2026</b></li>
+            <li>SVG · no framework</li>
+            <li>Side project</li>
+          </ul>
         </div>
-      </li>
-    </ul>
-  </section>
-
-  <section id="education" data-scene="education">
-    <div class="veil" aria-hidden="true"><i></i></div>
-    <p class="section-label">Education</p>
-    <h2>Where I studied</h2>
-    <ol class="timeline">
-      <li>
-        <span class="when">2023 &ndash; now</span>
-        <span class="what">
-          <span class="inst">Bangkok University</span>
-          <span class="inst-th">&#3617;&#3627;&#3634;&#3623;&#3636;&#3607;&#3618;&#3634;&#3621;&#3633;&#3618;&#3585;&#3619;&#3640;&#3591;&#3648;&#3607;&#3614;</span>
-          <span class="detail">BSc, School of Information Technology and Innovation.
-          Elective track in interactive media; the course-swap board above is the
-          final-year project.</span>
-        </span>
-      </li>
-      <li>
-        <span class="when">2025</span>
-        <span class="what">
-          <span class="inst">Google UX Design Certificate</span>
-          <span class="detail">Six courses on Coursera over one long semester break.
-          Mostly worth it for the vocabulary to argue with designers properly.</span>
-        </span>
-      </li>
-      <li>
-        <span class="when">2017 &ndash; 2023</span>
-        <span class="what">
-          <span class="inst">Assumption College Thonburi</span>
-          <span class="inst-th">&#3650;&#3619;&#3591;&#3648;&#3619;&#3637;&#3618;&#3609;&#3629;&#3633;&#3626;&#3626;&#3633;&#3617;&#3594;&#3633;&#3597;&#3608;&#3609;&#3610;&#3640;&#3619;&#3637;</span>
-          <span class="detail">Science&ndash;Mathematics programme. Two years on the
-          student council and one season of school futsal, mostly on the bench.</span>
-        </span>
       </li>
     </ol>
   </section>
 
+  <!-- EDUCATION: rail with huge years, teal -->
+  <section id="education" data-scene="education">
+    <div class="veil" aria-hidden="true"><i></i></div>
+    <div class="head">
+      <p class="kicker">03 &mdash; Education</p>
+      <h2>Three places that stuck</h2>
+    </div>
+    <ol class="timeline">
+      <li>
+        <span class="yr">2023&ndash;</span>
+        <span class="inst">Bangkok University</span>
+        <span class="inst-th">มหาวิทยาลัยกรุงเทพ</span>
+        <span class="detail">BSc, School of Information Technology and Innovation, with an
+        elective track in interactive media.</span>
+        <span class="took"><b>What stuck</b>Distributed systems, taught by someone who kept
+        breaking our assignments on purpose to show what a retry policy is for.</span>
+      </li>
+      <li>
+        <span class="yr">2025</span>
+        <span class="inst">Google UX Design Certificate</span>
+        <span class="detail">Six courses on Coursera across one long semester break.</span>
+        <span class="took"><b>What stuck</b>How to run a usability test without leading the
+        person through it. Harder than it sounds.</span>
+      </li>
+      <li>
+        <span class="yr">2017&ndash;23</span>
+        <span class="inst">Assumption College Thonburi</span>
+        <span class="inst-th">โรงเรียนอัสสัมชัญธนบุรี</span>
+        <span class="detail">Science&ndash;Mathematics programme. Two years on the student
+        council, one season of school futsal, mostly on the bench.</span>
+        <span class="took"><b>What stuck</b>That a broken form nobody can fix is a real
+        problem, and fixing it counts as work.</span>
+      </li>
+    </ol>
+  </section>
+
+  <!-- FOCUS: tag cloud at mixed sizes, violet -->
   <section id="focus" data-scene="focus">
     <div class="veil" aria-hidden="true"><i></i></div>
-    <p class="section-label">Focus</p>
-    <h2>What I&rsquo;m into</h2>
-    <p>The things I spend real hours on, roughly in order.</p>
-    <ul class="chips">
-      <li>Front-end engineering</li>
-      <li>TypeScript</li>
-      <li>Motion &amp; WebGL</li>
-      <li>Design systems</li>
-      <li>Thai typography</li>
-      <li>Futsal</li>
-      <li>35mm film</li>
-      <li>Pour-over</li>
+    <div class="head"><h2>What I&rsquo;m into</h2></div>
+    <ul class="cloud">
+      <li class="s1">Front-end</li>
+      <li class="s2">TypeScript</li>
+      <li class="s3">Design systems</li>
+      <li class="s1">Motion</li>
+      <li class="s4">WebGL</li>
+      <li class="s2">Thai typography</li>
+      <li class="s3">Accessibility</li>
+      <li class="s4">Futsal</li>
+      <li class="s3">35mm film</li>
+      <li class="s4">Pour-over</li>
     </ul>
     <dl class="now">
       <div><dt>Building</dt><dd>A scroll-linked case study page for a friend&rsquo;s studio</dd></div>
@@ -857,25 +739,26 @@
     </dl>
   </section>
 
+  <!-- CONTACT: oversized menu, sky blue -->
   <section id="contact" data-scene="contact">
     <div class="veil" aria-hidden="true"><i></i></div>
-    <p class="section-label">Contact</p>
+    <p class="kicker">05 &mdash; Contact</p>
     <h2>Say hello</h2>
     <p class="availability">
-      <b>Open to internships from June 2027</b>, and to small freelance builds before
-      that. Email is the surest way to reach me &mdash; I usually reply within a day or two.
+      <b>Open to internships from June 2027</b>, and to small freelance builds before then.
+      Email is the surest way to reach me &mdash; I usually reply within a day or two.
     </p>
     <div class="links">
       <a href="mailto:kanatouch.wong@gmail.com">
-        Email
+        <span class="what">Email</span>
         <span class="handle">kanatouch.wong@gmail.com</span>
       </a>
       <a href="https://www.instagram.com/kookooknt" target="_blank" rel="noopener noreferrer">
-        Instagram
+        <span class="what">Instagram</span>
         <span class="handle">@kookooknt</span>
       </a>
       <a href="https://www.facebook.com/kanatouch.wongga.2025" target="_blank" rel="noopener noreferrer">
-        Facebook
+        <span class="what">Facebook</span>
         <span class="handle">@kanatouch.wongga.2025</span>
       </a>
     </div>
@@ -929,9 +812,8 @@
   var canHover = window.matchMedia && window.matchMedia('(hover: hover)').matches;
   var small = window.innerWidth < 760;
 
-  var MAGENTA = 0xF0509B, VIOLET = 0x9E7CF5, TEAL = 0x2ED4C6, AMBER = 0xFFB25C;
+  var MAGENTA = 0xF0509B, VIOLET = 0x9E7CF5, TEAL = 0x2ED4C6, AMBER = 0xFFB25C, SKY = 0x6FA8FF;
 
-  // shared pointer, smoothed
   var aimX = 0, aimY = 0, curX = 0, curY = 0;
   window.addEventListener('pointermove', function (e) {
     aimX = (e.clientX / window.innerWidth - 0.5) * 0.9;
@@ -944,8 +826,20 @@
       new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: opacity })
     );
   }
+  function solid(geo, color, opts) {
+    opts = opts || {};
+    return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+      color: color,
+      metalness: opts.metalness === undefined ? 0.55 : opts.metalness,
+      roughness: opts.roughness === undefined ? 0.42 : opts.roughness,
+      flatShading: !!opts.flat,
+      transparent: true,
+      opacity: opts.opacity === undefined ? 0.55 : opts.opacity
+    }));
+  }
 
-  /* ── Full-page scene: one object anchored to each section ── */
+  /* ── Full-page scene: a different object, and a different
+        material, anchored to every section ─────────────── */
   (function stage() {
     var canvas = document.getElementById('stage');
     if (!canvas || typeof THREE === 'undefined') return;
@@ -957,107 +851,123 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, small ? 1.5 : 2));
 
     var scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x0A0918, 0.075);
+    scene.fog = new THREE.FogExp2(0x0A0918, 0.07);
     var camera = new THREE.PerspectiveCamera(46, 1, 0.1, 120);
     camera.position.set(0, 0, 9);
+
+    // lights, so the solid objects read as objects and not silhouettes
+    scene.add(new THREE.AmbientLight(0x2E2650, 1.0));
+    var l1 = new THREE.PointLight(0xFFFFFF, 1.5, 34); l1.position.set(-5, 4, 6);
+    var l2 = new THREE.PointLight(VIOLET, 1.2, 34);   l2.position.set(5, -3, 4);
+    scene.add(l1, l2);
 
     var world = new THREE.Group();
     scene.add(world);
 
-    var UNIT = 7;               // world units per viewport height
-    var SIDE = small ? 0 : 3.5; // objects sit beside the column on desktop
+    var UNIT = 7;
+    var SIDE = small ? 0 : 4.5;
     var scenes = [];
-
-    function addScene(key, obj, side, depth) {
-      obj.position.x = side * SIDE;
+    function addScene(key, obj, depth) {
+      obj.userData.depth = depth;
       obj.position.z = depth;
       world.add(obj);
       scenes.push({ key: key, obj: obj, el: null });
     }
 
-    // 1 · hero — a big slow icosphere lattice
+    // hero — an open violet lattice, nothing solid yet
     var hero = new THREE.Group();
     hero.add(wire(new THREE.IcosahedronGeometry(2.4, 1), VIOLET, 0.34));
     hero.add(wire(new THREE.IcosahedronGeometry(1.5, 0), MAGENTA, 0.5));
-    addScene('hero', hero, -1, -2.5);
+    addScene('hero', hero, -2.5);
 
-    // 2 · about — nested rings, like a gyroscope
+    // about — one solid, slow, hand-warm form: a brass knot
     var about = new THREE.Group();
-    var ringA = wire(new THREE.TorusGeometry(2.1, 0.5, 6, 22), TEAL, 0.38);
-    var ringB = wire(new THREE.TorusGeometry(1.4, 0.35, 6, 18), AMBER, 0.4);
-    ringB.rotation.x = Math.PI / 2.4;
-    about.add(ringA, ringB);
-    addScene('about', about, 1, -3);
+    var knot = solid(new THREE.TorusKnotGeometry(1.2, 0.34, 150, 22), 0xE09A48,
+                     { metalness: 0.78, roughness: 0.3 });
+    about.add(knot);
+    addScene('about', about, -3.2);
 
-    // 3 · work — a drifting cluster of cubes
+    // work — solid boxes, edges picked out, tumbling as a tight stack
     var work = new THREE.Group();
     var cubes = [];
-    for (var c = 0; c < 9; c++) {
-      var box = wire(new THREE.BoxGeometry(0.75, 0.75, 0.75), c % 2 ? MAGENTA : VIOLET, 0.45);
+    for (var c = 0; c < 7; c++) {
+      var g = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+      var box = solid(g, 0x7A2450, { metalness: 0.62, roughness: 0.35, flat: true });
+      box.add(wire(g, MAGENTA, 0.55));
       box.position.set(
-        (Math.random() - 0.5) * 3.6,
-        (Math.random() - 0.5) * 3.6,
-        (Math.random() - 0.5) * 2.6
+        (Math.random() - 0.5) * 2.8,
+        (Math.random() - 0.5) * 2.8,
+        (Math.random() - 0.5) * 2.0
       );
-      box.userData.spin = 0.2 + Math.random() * 0.5;
+      box.userData.spin = 0.22 + Math.random() * 0.45;
       box.userData.phase = Math.random() * 6.28;
       cubes.push(box);
       work.add(box);
     }
-    addScene('work', work, -1, -2.8);
+    addScene('work', work, -3);
 
-    // 4 · education — a double helix climbing upward
+    // education — a ladder: two strands, with rungs across them
     var edu = new THREE.Group();
-    var beads = [];
-    var beadGeo = new THREE.OctahedronGeometry(0.14, 0);
-    for (var i = 0; i < 34; i++) {
-      for (var strand = 0; strand < 2; strand++) {
-        var a = i * 0.42 + strand * Math.PI;
-        var bead = new THREE.Mesh(
-          beadGeo,
-          new THREE.MeshBasicMaterial({
-            color: strand ? TEAL : AMBER, transparent: true, opacity: 0.75
-          })
-        );
-        bead.position.set(Math.cos(a) * 1.15, i * 0.17 - 2.8, Math.sin(a) * 1.15);
-        beads.push(bead);
-        edu.add(bead);
-      }
+    var rungPts = [], beads = [];
+    var beadGeo = new THREE.OctahedronGeometry(0.13, 0);
+    var beadMat = new THREE.MeshBasicMaterial({ color: TEAL, transparent: true, opacity: 0.85 });
+    for (var i = 0; i < 30; i++) {
+      var a = i * 0.4, y = i * 0.22 - 3.2, r = 1.0;
+      var pA = new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
+      var pB = new THREE.Vector3(Math.cos(a + Math.PI) * r, y, Math.sin(a + Math.PI) * r);
+      [pA, pB].forEach(function (p) {
+        var b = new THREE.Mesh(beadGeo, beadMat);
+        b.position.copy(p); beads.push(b); edu.add(b);
+      });
+      if (i % 2 === 0) rungPts.push(pA, pB);
     }
-    addScene('education', edu, 1, -3);
+    var rungGeo = new THREE.BufferGeometry().setFromPoints(rungPts);
+    edu.add(new THREE.LineSegments(rungGeo,
+      new THREE.LineBasicMaterial({ color: AMBER, transparent: true, opacity: 0.4 })));
+    addScene('education', edu, -3.2);
 
-    // 5 · focus — three orbiting rings on different axes
+    // focus — a swarm, not a solid: points orbiting inside thin rings
     var focus = new THREE.Group();
-    var orbits = [];
-    for (var o = 0; o < 3; o++) {
-      var orbit = wire(new THREE.TorusGeometry(1.2 + o * 0.6, 0.02, 3, 40),
-                       [MAGENTA, TEAL, AMBER][o], 0.55);
-      orbit.rotation.x = o * 0.7;
-      orbit.rotation.y = o * 0.5;
-      orbits.push(orbit);
-      focus.add(orbit);
+    var n = small ? 300 : 620, fp = new Float32Array(n * 3);
+    for (var s = 0; s < n; s++) {
+      var u = Math.random() * Math.PI * 2, v = Math.random() * Math.PI * 2;
+      var R = 1.75, rr = 0.42 + Math.random() * 0.34;
+      fp[s * 3]     = (R + rr * Math.cos(v)) * Math.cos(u);
+      fp[s * 3 + 1] = rr * Math.sin(v);
+      fp[s * 3 + 2] = (R + rr * Math.cos(v)) * Math.sin(u);
     }
-    var nucleus = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(0.34, 0),
-      new THREE.MeshBasicMaterial({ color: 0xFFE9C9, transparent: true, opacity: 0.85 })
-    );
+    var swarmGeo = new THREE.BufferGeometry();
+    swarmGeo.setAttribute('position', new THREE.BufferAttribute(fp, 3));
+    var swarm = new THREE.Points(swarmGeo, new THREE.PointsMaterial({
+      color: 0xC8A6FF, size: 0.055, transparent: true, opacity: 0.85,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    focus.add(swarm);
+    var orbits = [];
+    for (var o = 0; o < 2; o++) {
+      var ring = wire(new THREE.TorusGeometry(2.2 + o * 0.5, 0.015, 3, 48), VIOLET, 0.45);
+      ring.rotation.x = 0.5 + o * 0.9;
+      orbits.push(ring); focus.add(ring);
+    }
+    var nucleus = solid(new THREE.IcosahedronGeometry(0.42, 0), 0xEDE2FF,
+                        { metalness: 0.2, roughness: 0.15 });
     focus.add(nucleus);
-    addScene('focus', focus, -1, -2.6);
+    addScene('focus', focus, -2.8);
 
-    // 6 · contact — a slowly opening dodecahedron
+    // contact — one solid blue body, breathing, its edges lit
     var contact = new THREE.Group();
-    contact.add(wire(new THREE.DodecahedronGeometry(2, 0), AMBER, 0.4));
-    contact.add(wire(new THREE.DodecahedronGeometry(1.1, 0), MAGENTA, 0.5));
-    addScene('contact', contact, 1, -2.8);
+    var dodeGeo = new THREE.DodecahedronGeometry(1.7, 0);
+    var dode = solid(dodeGeo, 0x2B4A82, { metalness: 0.7, roughness: 0.25, flat: true });
+    dode.add(wire(dodeGeo, SKY, 0.6));
+    contact.add(dode);
+    addScene('contact', contact, -3);
 
-    // starfield spanning the whole scroll depth
     var stars, starGeo;
     function buildStars() {
       if (stars) { world.remove(stars); starGeo.dispose(); }
       var depth = (document.body.scrollHeight / window.innerHeight) * UNIT;
-      var n = small ? 320 : 700;
-      var p = new Float32Array(n * 3);
-      for (var i = 0; i < n; i++) {
+      var k = small ? 300 : 650, p = new Float32Array(k * 3);
+      for (var i = 0; i < k; i++) {
         p[i * 3]     = (Math.random() - 0.5) * 26;
         p[i * 3 + 1] = -Math.random() * depth + UNIT * 0.5;
         p[i * 3 + 2] = -Math.random() * 14 - 1;
@@ -1065,21 +975,20 @@
       starGeo = new THREE.BufferGeometry();
       starGeo.setAttribute('position', new THREE.BufferAttribute(p, 3));
       stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
-        color: 0xBFA8FF, size: 0.055, transparent: true, opacity: 0.6,
+        color: 0xBFA8FF, size: 0.05, transparent: true, opacity: 0.55,
         blending: THREE.AdditiveBlending, depthWrite: false
       }));
       world.add(stars);
     }
 
-    // map each scene to its section's position on the page
     function anchor() {
       for (var i = 0; i < scenes.length; i++) {
-        var s = scenes[i];
-        s.el = s.el || document.querySelector('[data-scene="' + s.key + '"]');
-        if (!s.el) continue;
-        var r = s.el.getBoundingClientRect();
+        var sc = scenes[i];
+        sc.el = sc.el || document.querySelector('[data-scene="' + sc.key + '"]');
+        if (!sc.el) continue;
+        var r = sc.el.getBoundingClientRect();
         var centre = r.top + window.scrollY + r.height / 2;
-        s.obj.position.y = -(centre / window.innerHeight) * UNIT;
+        sc.obj.position.y = -(centre / window.innerHeight) * UNIT;
       }
     }
 
@@ -1089,9 +998,13 @@
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       small = w < 760;
-      SIDE = small ? 0 : 3.5;
+      SIDE = small ? 0 : 4.5;
       for (var i = 0; i < scenes.length; i++) {
-        scenes[i].obj.position.x = (i % 2 ? 1 : -1) * SIDE;
+        var ob = scenes[i].obj;
+        ob.position.x = (i % 2 ? 1 : -1) * SIDE;
+        // on a phone the column fills the screen, so sink the object further back
+        ob.position.z = ob.userData.depth - (small ? 3.4 : 0);
+        ob.scale.setScalar(small ? 0.78 : 1);
       }
       anchor();
       buildStars();
@@ -1108,7 +1021,6 @@
       curX += (aimX - curX) * 0.04;
       curY += (aimY - curY) * 0.04;
 
-      // scroll drives the world's vertical position
       world.position.y = ((window.scrollY + window.innerHeight / 2) / window.innerHeight) * UNIT;
       world.rotation.y = curX * 0.18;
       world.rotation.x = curY * 0.1;
@@ -1116,8 +1028,8 @@
       hero.rotation.y = t * 0.11;
       hero.rotation.x = Math.sin(t * 0.3) * 0.18;
 
-      ringA.rotation.x = t * 0.26; ringA.rotation.y = t * 0.17;
-      ringB.rotation.y = -t * 0.34; ringB.rotation.z = t * 0.2;
+      knot.rotation.y = t * 0.16;
+      knot.rotation.x = t * 0.09;
 
       for (var c = 0; c < cubes.length; c++) {
         var b = cubes[c];
@@ -1126,33 +1038,29 @@
         b.position.y += Math.sin(t * 0.8 + b.userData.phase) * 0.0016;
       }
 
-      edu.rotation.y = t * 0.3;
-      for (var k = 0; k < beads.length; k++) {
-        beads[k].position.y += Math.sin(t * 1.1 + k * 0.2) * 0.0009;
-      }
+      edu.rotation.y = t * 0.26;
 
-      for (var o = 0; o < orbits.length; o++) {
-        orbits[o].rotation.z = t * (0.22 + o * 0.16) * (o % 2 ? -1 : 1);
-        orbits[o].rotation.y = t * 0.12 * (o + 1);
-      }
-      nucleus.rotation.y = t * 0.8;
-      nucleus.scale.setScalar(1 + Math.sin(t * 1.6) * 0.09);
+      swarm.rotation.y = t * 0.2;
+      swarm.rotation.x = Math.sin(t * 0.3) * 0.25;
+      orbits[0].rotation.z = t * 0.3;
+      orbits[1].rotation.z = -t * 0.22;
+      nucleus.rotation.y = t * 0.9;
+      nucleus.scale.setScalar(1 + Math.sin(t * 1.7) * 0.12);
 
-      contact.rotation.y = -t * 0.16;
-      contact.rotation.z = Math.sin(t * 0.25) * 0.2;
-      contact.children[1].rotation.y = t * 0.4;
+      dode.rotation.y = -t * 0.18;
+      dode.rotation.z = Math.sin(t * 0.24) * 0.22;
+      dode.scale.setScalar(1 + Math.sin(t * 0.6) * 0.07);
 
       renderer.render(scene, camera);
     })(t0);
 
     if (reduced) {
-      // one static frame, then stop driving it from the clock
       world.position.y = ((window.scrollY + window.innerHeight / 2) / window.innerHeight) * UNIT;
       renderer.render(scene, camera);
     }
   })();
 
-  /* ── 3D portrait object ─────────────────────────────── */
+  /* ── Portrait gem ───────────────────────────────────── */
   (function gem() {
     var canvas = document.getElementById('gem');
     var monogram = document.getElementById('monogram');
@@ -1174,9 +1082,7 @@
 
     var core = new THREE.Mesh(
       new THREE.IcosahedronGeometry(1.18, 1),
-      new THREE.MeshStandardMaterial({
-        color: 0x241a4a, metalness: 0.72, roughness: 0.28, flatShading: true
-      })
+      new THREE.MeshStandardMaterial({ color: 0x241a4a, metalness: 0.72, roughness: 0.28, flatShading: true })
     );
     group.add(core);
 
@@ -1203,10 +1109,10 @@
     group.add(motes);
 
     scene.add(new THREE.AmbientLight(0x3B2F63, 1.1));
-    var keyLight = new THREE.PointLight(MAGENTA, 1.5, 22); keyLight.position.set(-3.1, 2.4, 3.2);
-    var fillLight = new THREE.PointLight(0x7C5CE6, 1.35, 22); fillLight.position.set(3.4, -1.1, 2.6);
-    var rimLight = new THREE.PointLight(AMBER, 1.1, 22); rimLight.position.set(0.6, -3.1, -2.4);
-    scene.add(keyLight, fillLight, rimLight);
+    var k1 = new THREE.PointLight(MAGENTA, 1.5, 22); k1.position.set(-3.1, 2.4, 3.2);
+    var k2 = new THREE.PointLight(0x7C5CE6, 1.35, 22); k2.position.set(3.4, -1.1, 2.6);
+    var k3 = new THREE.PointLight(AMBER, 1.1, 22); k3.position.set(0.6, -3.1, -2.4);
+    scene.add(k1, k2, k3);
 
     function resize() {
       var w = canvas.clientWidth || 250, h = canvas.clientHeight || 312;
@@ -1222,9 +1128,8 @@
 
     var visible = true;
     if (window.IntersectionObserver) {
-      new IntersectionObserver(function (entries) {
-        visible = entries[0].isIntersecting;
-      }, { threshold: 0.05 }).observe(canvas);
+      new IntersectionObserver(function (e) { visible = e[0].isIntersecting; },
+        { threshold: 0.05 }).observe(canvas);
     }
 
     var t0 = performance.now();
@@ -1242,7 +1147,7 @@
     })(t0);
   })();
 
-  /* ── Scroll-driven 3D tilt on every section ─────────── */
+  /* ── Scroll-driven depth on every block ─────────────── */
   (function sectionDepth() {
     if (reduced) return;
     var blocks = document.querySelectorAll('.masthead, .page section');
@@ -1259,8 +1164,7 @@
         var d = ((r.top + r.height / 2) - mid) / window.innerHeight;
         d = Math.max(-1.2, Math.min(1.2, d));
         el.style.transform =
-          'translateZ(' + (-Math.abs(d) * 70).toFixed(1) + 'px) ' +
-          'rotateX(' + (-d * 4.2).toFixed(2) + 'deg)';
+          'translateZ(' + (-Math.abs(d) * 70).toFixed(1) + 'px) rotateX(' + (-d * 4.2).toFixed(2) + 'deg)';
       }
       if (skyline) {
         var sr = skyline.getBoundingClientRect();
@@ -1268,18 +1172,13 @@
         skyline.style.transform = 'translate3d(' + (sd * -26).toFixed(1) + 'px,0,0)';
       }
     }
-
-    function onScroll() {
-      if (queued) return;
-      queued = true;
-      requestAnimationFrame(apply);
-    }
+    function onScroll() { if (!queued) { queued = true; requestAnimationFrame(apply); } }
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
     apply();
   })();
 
-  /* ── 3D tilt on the work thumbnails ─────────────────── */
+  /* ── Work thumbnails tilt to the cursor ─────────────── */
   (function tilt() {
     if (reduced || !canHover) return;
     var items = document.querySelectorAll('#work-grid li');
@@ -1292,8 +1191,7 @@
         var y = (e.clientY - r.top) / r.height - 0.5;
         thumb.style.transition = 'box-shadow .35s ease, border-color .35s ease';
         thumb.style.transform =
-          'rotateY(' + (x * 13).toFixed(2) + 'deg) rotateX(' + (-y * 11).toFixed(2) +
-          'deg) translateZ(18px)';
+          'rotateY(' + (x * 12).toFixed(2) + 'deg) rotateX(' + (-y * 10).toFixed(2) + 'deg) translateZ(18px)';
       });
       li.addEventListener('pointerleave', function () {
         thumb.style.transition = '';
